@@ -25,14 +25,36 @@ from teryt2osm.reporting import Reporting
 
 __version__ = "$Revision: 2 $"
 
+class LocationSet(object):
+    def __init__(self):
+        self.dict = {}
+
+    def add(self, location):
+        loc_id = id(location)
+        self.dict[loc_id] = self.dict.get(loc_id, 0) + 1
+
+    def count(self, location):
+        return self.dict.get(id(location), 0)
+
+    def __contains__(self, location):
+        return id(location) in self.dict
+    
+    def contains(self, location):
+        return id(location) in self.dict
+
+    def __len__(self):
+        return len(self.dict)
+
+    def __repr__(self):
+        return "<LocationSet %r>" % (self.dict,)
 
 class Cell(object):
     def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.wojewodztwa = set()
-        self.powiaty = set()
-        self.gminy = set()
+        self.wojewodztwa = LocationSet()
+        self.powiaty = LocationSet()
+        self.gminy = LocationSet()
     def add_place(self, place):
         self.wojewodztwa.add(place.wojewodztwo)
         self.powiaty.add(place.powiat)
