@@ -48,6 +48,8 @@ class OSM_Place(object):
         self.terc_id = None
         self.simc_place = None
         self.id = element.attrib["id"]
+        self.lon = float(element.attrib["lon"])
+        self.lat = float(element.attrib["lat"])
 
         tags = {}
         for tag in element:
@@ -139,7 +141,7 @@ class OSM_Place(object):
                 self._by_simc_id[self.simc_id] = self
        
         if self.simc_place:
-            gmina = simc_place.gmina 
+            gmina = self.simc_place.gmina 
             if (self.gmina and gmina != self.gmina
                     or self.powiat and gmina.powiat != self.powiat
                     or self.wojewodztwo 
@@ -148,6 +150,11 @@ class OSM_Place(object):
                         u"teryt:simc nie zgadza się z położeniem wynikającym z innych tagów")
             else:    
                 self.gmina = simc_place.gmina
+                self.powiat = simc_place.powiat
+                self.wojewodztwo = simc_place.wojewodztwo
+            reporting.output_msg("preassigned", 
+                    u"%r ma już przypisany rekord SIMC: %r" 
+                                % (self, simc_place), self)
        
         if "teryt:terc" in tags:
             self.terc_id = tags["teryt:terc"]
@@ -161,7 +168,12 @@ class OSM_Place(object):
                             or self.wojewodztwo 
                                 and gmina.wojewodztwo != self.wojewodztwo):
                         reporting.output_msg("errors", 
-                                u"teryt:terc nie zgadza się z położeniem wynikającym z innych tagów")
+                                u"teryt:terc nie zgadza się"
+                                u" z położeniem wynikającym z innych tagów")
+                    if gmina and not self.gmina:
+                        self.gmina = gmina
+                        self.powiat = gmina.powiat
+                        self.wojewodztwo = gmina.wojewodztwo
                 except KeyError:
                     pass
         self._by_id[self.id] = self

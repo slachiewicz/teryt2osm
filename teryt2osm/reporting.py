@@ -131,6 +131,8 @@ class Channel(object):
             self.subchannels[loc_name] = subchannel
         subchannel.split_level = split_level
         subchannel.emit(msg, location)
+    def __repr__(self):
+        return "<Channel %i %r quiet=%r>" % (id(self), self.name, self.quiet)
 
 class Reporting(object):
     instance = None
@@ -193,9 +195,9 @@ class Reporting(object):
         else:
             print >>sys.stderr, msg
 
-    def output_msg(self, channel, msg, location = None):
+    def output_msg(self, channel_name, msg, location = None):
         """Output a single message via channel 'channel'."""
-        channel = self.get_channel(channel)
+        channel = self.get_channel(channel_name)
         if not channel.quiet:
             self.print_msg(msg)
             self.log(msg)
