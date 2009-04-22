@@ -35,6 +35,7 @@ from teryt2osm.simc import SIMC_Place, load_simc, write_wmrodz_wiki
 from teryt2osm.osm_places import OSM_Place, load_osm
 from teryt2osm.reporting import Reporting
 from teryt2osm.grid import Grid
+import xml.etree.cElementTree as ElementTree
 
 def match_names(pass_no, places_to_match, grid = None):
     reporting = Reporting()
@@ -197,8 +198,51 @@ def match():
     assigned.update(osm_matched3)
     matched = osm_matched1.union(osm_matched2, osm_matched3)
     matched = refine(matched, assigned)
-    assigned = set(preassigned).update(matched)
+    assigned = set(preassigned).union(matched)
     return assigned
+
+def update(places):
+    updated = []
+    for place in places:
+        if place.update():
+            updated.append(place)
+    return updated
+
+def write_changes(updated_places, created_by):
+    reporting = Reporting()
+    reporting.progress_start(u"Preparing osmChange files", len(updated_places))
+    woj_trees = {}
+    for place in updated_places:
+        woj_name = place.wojewodztwo.name
+        if not woj_name in woj_trees:
+            root = ElementTree.Element(u"osmChange", version = u"0.3", generator = created_by)
+            tree = ElementTree.ElementTree(root)
+            modify = ElementTree.Element(u"modify", version = u"0.3", generator = created_by)
+            root.append(modify)
+            woj_trees[woj_name] = tree
+        else:
+            root = woj_trees[woj_name].getroot()
+            modify = root[0]
+        node = ElementTree.Element(u"node", id = place.id, lon = str(place.lon), lat = str(place.lat),
+                    version = place.version, changeset = place.changeset)
+        modify.append(node)
+        for k, v in place.tags.items():
+            if k == 'teryt:updated_by':
+                continue
+            tag = ElementTree.Element(u"tag", k = k, v = v)
+            node.append(tag)
+        tag = ElementTree.Element(u"tag", k = u"teryt:updated_by", v = created_by)
+        node.append(tag)
+        reporting.progress()
+    reporting.progress_stop()
+
+    reporting = Reporting()
+    reporting.progress_start(u"Writting osmChange files", len(woj_trees))
+    for woj_name, tree in woj_trees.items():
+        tree.write(os.path.join("output", woj_name.encode("utf-8") + ".osc"), "utf-8")
+        reporting.progress()
+    reporting.progress_stop()
+
 
 try:
     this_dir = os.path.dirname(__file__)
@@ -224,8 +268,10 @@ try:
     load_simc()
     write_wmrodz_wiki()
     load_osm()
-    match()
+    assigned = match()
+    updated = update(assigned)
     reporting.close()
+    write_changes(updated, u"teryt2osm v. %s" % (version,))
 except Exception,err:
     print >>sys.stderr, repr(err)
     traceback.print_exc(file=sys.stderr)

@@ -89,7 +89,9 @@ class SIMC_Place(object):
     _by_id = {}
     _by_type = {}
     _by_name = {}
-    def __init__(self, place_type, name, terc_id, place_id, parent_id, date):
+    def __init__(self, rm, name, terc_id, place_id, parent_id, date):
+        self.rm = rm
+        place_type = rm2place_mapping[rm]
         self.type = place_type
         self.name = name
         self.terc_id = terc_id
@@ -102,6 +104,7 @@ class SIMC_Place(object):
             self.parent_id = parent_id
         else:
             self.parent_id = None
+        self.date = date
         self._by_id[place_id] = self
         add_to_list_dict(self._by_type, place_type, self)
         add_to_list_dict(self._by_name, name.lower(), self)
@@ -160,9 +163,8 @@ class SIMC_Place(object):
                 date = child.text
         if rm not in rm2place_mapping:
             return None
-        place_type = rm2place_mapping[rm]
         code = woj_code + pow_code + gmi_code + gmi_type
-        return cls(place_type, name, code, place_id, parent_id, date)
+        return cls(rm, name, code, place_id, parent_id, date)
     
     def assign_osm(self, osm_place):
         """Assigning a OSM place"""
