@@ -226,8 +226,10 @@ class Reporting(object):
         self.need_eol = True
 
     def progress(self, increment = None, value = None):
-        if not self.progress_total:
+        if self.progress_total is None:
             raise ProgressError, u"Progress reporting not started."
+        if not self.progrss_total:
+            return
         if increment is not None:
             self.progress_value += increment
         elif value is not None:
@@ -242,7 +244,7 @@ class Reporting(object):
         self.need_eol = True
 
     def progress_stop(self):
-        if not self.progress_total:
+        if self.progress_total is None:
             raise ProgressError, u"Progress reporting not started."
         print >>sys.stderr, "\r%s 100%%  " % (self.progress_msg,)
         self.progress_total = None
