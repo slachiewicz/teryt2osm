@@ -112,6 +112,9 @@ class Powiat(TERCObject):
         else:
             return u"powiat " + self.name
 
+    def __repr__(self):
+        return "<Powiat %r>" % (self.full_name(),)
+
     @classmethod
     def by_name(cls, name, try_hard = False, wojewodztwo = None):
         name = name.lower()

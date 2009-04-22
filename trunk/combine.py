@@ -33,14 +33,22 @@ from teryt2osm.terc import Wojewodztwo, Powiat, Gmina, load_terc, write_wojewodz
 from teryt2osm.simc import SIMC_Place, load_simc, write_wmrodz_wiki
 from teryt2osm.osm_places import OSM_Place, load_osm
 from teryt2osm.reporting import Reporting
+from teryt2osm.grid import Grid
 
-def match_names():
+def match_names(pass_no, places_to_match, grid = None):
     reporting = Reporting()
-    reporting.progress_start("Dopasowywanie nazw", OSM_Place.count())
-    found = []
+    places_count = len(places_to_match)
+    if grid:
+        reporting.progress_start(
+                u"Dopasowywanie nazw %i miejsc, przebieg %i, z siatką %s"
+                        % (places_count, pass_no, grid), places_count)
+    else:
+        reporting.progress_start(
+                u"Dopasowywanie nazw %i miejsc, przebieg %i"
+                        % (places_count, pass_no), places_count)
+    osm_matched = set()
     simc_matched = set()
-    places = [(unicode(p), p) for p in OSM_Place.all()]
-    places.sort()
+    places = [ (str(p), p) for p in places_to_match ]
     for name, osm_place in places:
         reporting.progress()
         if osm_place.name is None:
@@ -51,20 +59,41 @@ def match_names():
         try:
             matching_simc_places = SIMC_Place.by_name(osm_place.name)
         except KeyError:
-            reporting.output_msg("not_found", u"%s: nie znaleziono w TERYT" % (osm_place,), osm_place)
+            reporting.output_msg("not_found", u"%s: nie znaleziono w TERYT" 
+                                                    % (osm_place,), osm_place)
+            places_to_match.remove(osm_place)
             continue
         simc_places = [place for place in matching_simc_places 
-                                if place.type == osm_place.normalized_type ]
+                                if place.type == osm_place.normalized_type
+                                    and place.osm_place is None]
         if not simc_places:
             types_found = [ place.type for place in matching_simc_places ]
             reporting.output_msg("bad_type", u"%s: nie znalezionow w TERYT"
                         u" obiektu właściwego typu (%r, znaleziono: %r)" % (
                             osm_place, osm_place.type, types_found), osm_place)
             continue
+
+        if grid:
+            cell = grid.get_cell(osm_place)
+            simc_places = [ p for p in simc_places if p.powiat in cell.powiaty ]
+            if not simc_places:
+                reporting.output_msg("not_found",
+                        u"%s: nie znaleziono w TERYT miejsca"
+                        u" pasującego do komórki %s" % (osm_place, cell),
+                        osm_place)
+                continue
+
         if len(simc_places) > 1:
-            reporting.output_msg("ambigous", 
-                    u"%s z OSM pasuje do wielu obiektów w SIMC: %s" % (osm_place,
-                        ", ".join([str(p) for p in simc_places])), osm_place)
+            if grid:
+                reporting.output_msg("ambigous%i" % (pass_no,), 
+                        u"%s z OSM pasuje do wielu obiektów"
+                        u" SIMC w komórce %s: %s" % (osm_place, cell,
+                            u", ".join([str(p) for p in simc_places])), 
+                                                                osm_place)
+            else:
+                reporting.output_msg("ambigous%i" % (pass_no,), 
+                        u"%s z OSM pasuje do wielu obiektów w SIMC: %s" % (osm_place,
+                            u", ".join([str(p) for p in simc_places])), osm_place)
             continue
         simc_place = simc_places[0]
 
@@ -74,6 +103,9 @@ def match_names():
         for place in matching_osm_places:
             if place is osm_place:
                 continue
+            if grid:
+                if grid.get_cell(place) is not cell:
+                    continue
             if place.gmina and place.gmina != simc_place.gmina:
                 continue
             if place.powiat and place.powiat != simc_place.powiat:
@@ -81,23 +113,40 @@ def match_names():
             if place.wojewodztwo and place.wojewodztwo != simc_place.wojewodztwo:
                 continue
             confl_osm_places.append(place)
+
         if confl_osm_places:
-            reporting.output_msg("ambigous", 
+            reporting.output_msg("ambigous%i" % (pass_no,), 
                         u"%s z SIMC pasuje do wielu obiektów w OMS: %s" % (simc_place,
                             ", ".join([str(p) for p in confl_osm_places])), osm_place)
             continue
+        
+        if simc_place.osm_place:
+            reporting.output_msg("ambigous%i" % (pass_no,), 
+                    u"%s z SIMC ma już przypisany obiekt OSM: %s" % (
+                        simc_place, simc_place.osm_place), osm_place)
 
         # good match
         osm_place.assign_simc(simc_place)
+        simc_place.assign_osm(osm_place)
+
         reporting.output_msg("match", u"%s w OSM to %s w SIMC" % (osm_place, simc_place), osm_place) 
-        found.append(osm_place)
+        osm_matched.add(osm_place)
         simc_matched.add(simc_place)
+        places_to_match.remove(osm_place)
 
     reporting.progress_stop()
-    reporting.output_msg("stats", u"%i z %i miejscowości z OSM znalezionych w SIMC" % (
-                                                        len(found), OSM_Place.count()))
-    reporting.output_msg("stats", u"%i z %i miejscowości z SIMC znalezionych w OSM" % (
-                                                len(simc_matched), SIMC_Place.count()))
+    reporting.output_msg("stats", 
+            u"Przebieg %i: znaleziono w SIMC %i z %i miejscowości OSM" % (
+                                    pass_no, len(osm_matched), places_count))
+    return osm_matched, simc_matched
+
+def match():
+    places_to_match = set([p for p in OSM_Place.all() if not p.simc_place])
+    osm_matched1, simc_matched1 = match_names(1, places_to_match)
+    grid = Grid(osm_matched1, 31, 31)
+    osm_matched2, simc_matched2 = match_names(2, places_to_match, grid)
+    grid = Grid(osm_matched1, 43, 43)
+    osm_matched3, simc_matched3 = match_names(3, places_to_match, grid)
 
 try:
     setup_locale()
@@ -105,7 +154,9 @@ try:
     reporting.config_channel("errors", split_level = 2, mapping = True)
     reporting.config_channel("bad_type", split_level = 2, mapping = True, quiet = True)
     reporting.config_channel("not_found", split_level = 2, quiet = True, mapping = True)
-    reporting.config_channel("ambigous", split_level = 2, quiet = True, mapping = True)
+    reporting.config_channel("ambigous1", split_level = 2, quiet = True, mapping = True)
+    reporting.config_channel("ambigous2", split_level = 2, quiet = True, mapping = True)
+    reporting.config_channel("ambigous3", split_level = 2, mapping = True)
     reporting.config_channel("match", split_level = 2, quiet = True, mapping = True)
     for filename in ("data.osm", "SIMC.xml", "TERC.xml", "WMRODZ.xml"):
         if not os.path.exists(os.path.join("data", filename)):
@@ -116,7 +167,7 @@ try:
     load_simc()
     write_wmrodz_wiki()
     load_osm()
-    match_names()
+    match()
     reporting.close()
 except Exception,err:
     print >>sys.stderr, repr(err)

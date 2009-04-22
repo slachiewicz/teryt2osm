@@ -105,6 +105,7 @@ class SIMC_Place(object):
         self._by_id[place_id] = self
         add_to_list_dict(self._by_type, place_type, self)
         add_to_list_dict(self._by_name, name.lower(), self)
+        self.osm_place = None
 
     @classmethod
     def by_id(cls, place_id):
@@ -163,6 +164,10 @@ class SIMC_Place(object):
         code = woj_code + pow_code + gmi_code + gmi_type
         return cls(place_type, name, code, place_id, parent_id, date)
     
+    def assign_osm(self, osm_place):
+        """Assigning a OSM place"""
+        self.osm_place = osm_place
+
     def __repr__(self):
         return "<SIMC_Place #%s %r>" % (self.id, self.name)
     def __unicode__(self):
