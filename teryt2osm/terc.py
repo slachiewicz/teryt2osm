@@ -111,6 +111,9 @@ class Powiat(TERCObject):
             return u"powiat m. " + self.name
         else:
             return u"powiat " + self.name
+        
+    def is_city(self):
+        return self.name[0].isupper()
 
     def __repr__(self):
         return "<Powiat %r>" % (self.full_name(),)

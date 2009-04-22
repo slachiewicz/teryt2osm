@@ -50,6 +50,8 @@ class OSM_Place(object):
         self.id = element.attrib["id"]
         self.lon = float(element.attrib["lon"])
         self.lat = float(element.attrib["lat"])
+        self.changeset = element.attrib["changeset"]
+        self.version = element.attrib["version"]
 
         tags = {}
         for tag in element:
@@ -58,6 +60,7 @@ class OSM_Place(object):
             key = tag.attrib["k"]
             value = tag.attrib["v"]
             tags[key] = value
+        self.tags = tags
 
         if "name" in tags:
             self.name = tags["name"]
@@ -189,6 +192,62 @@ class OSM_Place(object):
         self.gmina = simc_place.gmina
         self.powiat = simc_place.powiat
         self.wojewodztwo = simc_place.wojewodztwo
+
+    def update(self):
+        if not self.simc_place:
+            return False
+        reporting = Reporting()
+        updated = False
+        tags = self.tags
+        if "teryt:simc" not in tags or tags['teryt:simc'] != self.simc_place.id:
+            updated = True
+            tags["teryt:simc"] = self.simc_place.id
+        if "teryt:terc" not in tags or tags['teryt:terc'] != self.gmina.code:
+            updated = True
+            tags["teryt:simc"] = self.gmina.code
+        if "teryt:rm" not in tags or tags['teryt:rm'] != self.simc_place.rm:
+            updated = True
+            tags["teryt:rm"] = self.simc_place.rm
+        if "teryt:stan_na" not in tags or tags['teryt:stan_na'] != self.simc_place.date:
+            updated = True
+            tags["teryt:date"] = self.simc_place.date
+        if self.simc_place.parent:
+            if "teryt:sympod" not in tags or tags['teryt:sympod'] != self.simc_place.parent.id:
+                updated = True
+                tags["teryt:sympod"] = self.simc_place.parent.id
+        elif "teryt:sympod" in tags:
+            updated = True
+            del tags["teryt:sympod"]
+        
+        if self.simc_place.parent:
+            is_in = [self.simc_place.parent.name]
+        else:
+            is_in = []
+        if not self.powiat.is_city():
+            is_in.append(self.powiat.full_name())
+        is_in += [self.wojewodztwo.full_name(), "Poland"]
+        is_in = u", ".join(is_in)
+
+        if "is_in" not in tags or tags['is_in'] == "Poland":
+            updated = True
+            tags['is_in'] = is_in
+        elif tags['is_in'] != is_in:
+            reporting.output_msg("warnings", u"Uwaga: nie zmienione is_in='%s' dla %r" % (tags['is_in'], self))
+
+        if "is_in:country" not in tags or tags['is_in:country'] != "Poland":
+            updated = True
+            tags['is_in:country'] = "Poland"
+        if "is_in:province" not in tags or tags['is_in:province'] != self.wojewodztwo.full_name():
+            updated = True
+            tags['is_in:province'] = self.wojewodztwo.full_name()
+        if self.powiat.is_city():
+            if "is_in:county" in tags:
+                updated = True
+                del tags["is_in:county"]
+        elif "is_in:county" not in tags or tags["is_in:county"] != self.powiat.full_name():
+            updated = True
+            tags['is_in:county'] = self.powiat.full_name()
+        return updated 
 
     @classmethod
     def by_id(cls, place_id):
