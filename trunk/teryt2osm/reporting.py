@@ -88,7 +88,7 @@ class Channel(object):
             if value:
                 self.map_file = file( os.path.join(self.directory, 
                                                     self.name + ".osm"), "w" )
-                self.map_file.write('<osm generator="teryt2osm" version="0.5">\n')
+                self.map_file.write('<osm generator="teryt2osm" version="0.6">\n')
         elif not value:
             self.close_map_file()
         for subch in self.subchannels.values():
