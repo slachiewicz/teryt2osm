@@ -137,9 +137,10 @@ class Channel(object):
 class Reporting(object):
     instance = None
 
-    def _init(self):
+    def _init(self, logging = True):
         global OSM_Place
         from teryt2osm.osm_places import OSM_Place
+        self.logging = True
         self.progress_total = None
         self.progress_step = None
         self.progress_value = None
@@ -163,10 +164,10 @@ class Reporting(object):
             channel.close()
         self.channels = {}
     
-    def __new__(cls):
+    def __new__(cls, logging = True):
         if cls.instance is None:
             cls.instance = object.__new__(cls)
-            cls.instance._init()
+            cls.instance._init(logging = logging)
         return cls.instance
 
     def get_channel(self, name):
@@ -200,8 +201,10 @@ class Reporting(object):
         channel = self.get_channel(channel_name)
         if not channel.quiet:
             self.print_msg(msg)
-            self.log(msg)
-        channel.emit(msg, location)
+            if self.logging:
+                self.log(msg)
+        if self.logging:
+            channel.emit(msg, location)
 
     def progress_start(self, msg, total, step = 1):
         """Start progrss reporting.
@@ -216,7 +219,8 @@ class Reporting(object):
         self.progress_step = max(int(total * step / 100), 1)
         self.progress_value = 0
         self.progress_msg = msg
-        self.log(u"%s… rozpoczęte" % (msg,))
+        if self.logging:
+            self.log(u"%s… rozpoczęte" % (msg,))
         sys.stderr.write(u"\r%s…  " % (msg,))
         sys.stderr.flush()
         self.need_eol = True
@@ -245,4 +249,5 @@ class Reporting(object):
         self.progress_step = None
         self.progress_value = None
         self.need_eol = False
-        self.log(u"%s… zakończone" % self.progress_msg)
+        if self.logging:
+            self.log(u"%s… zakończone" % self.progress_msg)
