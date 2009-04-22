@@ -228,7 +228,7 @@ class Reporting(object):
     def progress(self, increment = None, value = None):
         if self.progress_total is None:
             raise ProgressError, u"Progress reporting not started."
-        if not self.progrss_total:
+        if not self.progress_total:
             return
         if increment is not None:
             self.progress_value += increment
