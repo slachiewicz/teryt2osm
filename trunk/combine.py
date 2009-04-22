@@ -76,6 +76,8 @@ def match_names(pass_no, places_to_match, grid = None):
         if grid:
             cell = grid.get_cell(osm_place)
             simc_places = [ p for p in simc_places if p.powiat in cell.powiaty ]
+            if len(simc_places) > 1:
+                simc_places = [ p for p in simc_places if p.gmina in cell.gminy ]
             if not simc_places:
                 reporting.output_msg("not_found",
                         u"%s: nie znaleziono w TERYT miejsca"
