@@ -25,6 +25,7 @@
 __version__ = "$Revision$"
 
 import os
+import subprocess
 import sys
 import traceback
 
@@ -142,17 +143,69 @@ def match_names(pass_no, places_to_match, grid = None):
                                     pass_no, len(osm_matched), places_count))
     return osm_matched, simc_matched
 
+def refine(places, reference):
+    """Refine places matches by removing those too far from their neighbours."""
+    grid = Grid(reference, 23, 23)
+    reporting.progress_start(
+            u"Szukanie niepasujących powiązań, przebieg 1", len(places))
+    bad_matches = []
+    for place in places:
+        cell = grid.get_cell(place)
+        if place.simc_place.name == place.powiat.name:
+            if cell.wojewodztwa.count(place.wojewodztwo) < 2:
+                bad_matches.append(place)
+                reporting.output_msg("bad_match", u"Prawdopodobnie źle dopasowany: %s" % (place,), place) 
+        elif cell.powiaty.count(place.powiat) < 2:
+            bad_matches.append(place)
+            reporting.output_msg("bad_match", u"Prawdopodobnie źle dopasowany: %s" % (place,), place) 
+        reporting.progress()
+    reporting.progress_stop()
+    reporting.output_msg("info", u"Znaleziono %i kandydatów do usunięcia" % (len(bad_matches),))
+
+    grid = Grid(reference, 19, 19)
+    reporting.progress_start(
+            u"Szukanie niepasujących powiązań, przebieg 2", len(bad_matches))
+    really_bad_matches = set()
+    for place in bad_matches:
+        cell = grid.get_cell(place)
+        if place.simc_place.name == place.powiat.name:
+            if cell.wojewodztwa.count(place.wojewodztwo) < 2:
+                really_bad_matches.add(place)
+                reporting.output_msg("really_bad_match", u"Prawdopodobnie źle dopasowany: %s" % (place,), place) 
+        elif cell.powiaty.count(place.powiat) < 2:
+            really_bad_matches.add(place)
+            reporting.output_msg("really_bad_match", u"Źle dopasowany: %s" % (place,), place) 
+        reporting.progress()
+    reporting.progress_stop()
+    reporting.output_msg("info", u"Znaleziono %i miejsc do usunięcia" % (len(really_bad_matches),))
+    good_matches = set(places)
+    good_matches.difference(really_bad_matches)
+    return good_matches
+
 def match():
+    preassigned =  set([p for p in OSM_Place.all() if p.simc_place])
+    assigned = set(preassigned)
+    reporting.output_msg("start", u"%i wstępnie (w danych OSM) przypisanych miejscowości" % (len(preassigned),))
     places_to_match = set([p for p in OSM_Place.all() if not p.simc_place])
     osm_matched1, simc_matched1 = match_names(1, places_to_match)
-    grid = Grid(osm_matched1, 31, 31)
+    assigned.update(osm_matched1)
+    grid = Grid(assigned, 31, 31)
     osm_matched2, simc_matched2 = match_names(2, places_to_match, grid)
-    grid = Grid(osm_matched1, 43, 43)
+    assigned.update(osm_matched2)
+    grid = Grid(assigned, 43, 43)
     osm_matched3, simc_matched3 = match_names(3, places_to_match, grid)
+    assigned.update(osm_matched3)
+    matched = osm_matched1.union(osm_matched2, osm_matched3)
+    matched = refine(matched, assigned)
+    assigned = set(preassigned).update(matched)
+    return assigned
 
 try:
+    this_dir = os.path.dirname(__file__)
+    version = subprocess.Popen(["svnversion", this_dir], stdout = subprocess.PIPE).communicate()[0].strip()
     setup_locale()
     reporting = Reporting()
+    reporting.output_msg("info", u"teryt2osm combine.py version: %s" % (version,))
     reporting.config_channel("errors", split_level = 2, mapping = True)
     reporting.config_channel("bad_type", split_level = 2, mapping = True, quiet = True)
     reporting.config_channel("not_found", split_level = 2, quiet = True, mapping = True)
@@ -160,6 +213,8 @@ try:
     reporting.config_channel("ambigous2", split_level = 2, quiet = True, mapping = True)
     reporting.config_channel("ambigous3", split_level = 2, mapping = True)
     reporting.config_channel("match", split_level = 2, quiet = True, mapping = True)
+    reporting.config_channel("bad_match", split_level = 1, quiet = True, mapping = True)
+    reporting.config_channel("really_bad_match", split_level = 1, quiet = True, mapping = True)
     for filename in ("data.osm", "SIMC.xml", "TERC.xml", "WMRODZ.xml"):
         if not os.path.exists(os.path.join("data", filename)):
             reporting.output_msg("critical", u"Brakujący plik: %r" % (filename,))
