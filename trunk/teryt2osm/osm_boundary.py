@@ -29,58 +29,7 @@ from teryt2osm.utils import add_to_list_dict, count_elements
 from teryt2osm.terc import Wojewodztwo, Powiat, Gmina, load_terc
 from teryt2osm.simc import SIMC_Place, place_aliases
 from teryt2osm.reporting import Reporting
-
-class OSM_Node(object):
-    def __init__(self, element):
-        self.id = element.attrib["id"]
-        self.version = element.attrib["version"]
-        self.changeset = element.attrib["changeset"]
-        self.lon = float(element.attrib["lon"])
-        self.lat = float(element.attrib["lat"])
-        self.tags = {}
-        for sub in element:
-            if sub.tag == 'tag':
-                key = sub.attrib["k"]
-                value = sub.attrib["v"]
-                self.tags[key] = value
-       
-class OSM_Way(object):
-    def __init__(self, element):
-        self.id = element.attrib["id"]
-        self.version = element.attrib["version"]
-        self.changeset = element.attrib["changeset"]
-        self.tags = {}
-        self.node_ids = []
-        self.complete = False
-        for sub in element:
-            if sub.tag == 'tag':
-                key = sub.attrib["k"]
-                value = sub.attrib["v"]
-                self.tags[key] = value
-            if sub.tag == 'nd':
-                node_id = sub.attrib["ref"]
-                self.node_ids.append(node_id)
-        self.nodes = [None] * len(self.node_ids)
-
-    def add_nodes(self, nodes):
-        if not hasattr(nodes, "__getitem__"):
-            nodes = dict( [(n.id, n) for n in nodes] )
-        complete = True
-        for i in range(0, len(self.node_ids)):
-            node = nodes.get(self.node_ids[i])
-            if node:
-                self.nodes[i] = node
-            elif not self.nodes[i]:
-                complete = False
-        self.complete = complete
-
-    @property
-    def start_node(self):
-        return self.nodes[0]
-
-    @property
-    def end_node(self):
-        return self.nodes[-1]
+from teryt2osm.osm import OSM_Node, OSM_Way
 
 class OSM_Boundary(object):
     def __init__(self, relation_element, way_elements, node_elements):
