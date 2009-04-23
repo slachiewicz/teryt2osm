@@ -1,5 +1,5 @@
 #!/bin/sh
 
 mkdir -p data
-wget 'http://www.informationfreeway.org/api/0.5/node[place=*][bbox=13.84,48.92,24.27,54.89]' -O data/raw_data.osm
+#wget 'http://www.informationfreeway.org/api/0.5/node[place=*][bbox=13.84,48.92,24.27,54.89]' -O data/raw_data.osm
 wget 'http://www.openstreetmap.org/api/0.6/relation/49715/full' -O data/boundary_poland.osm
