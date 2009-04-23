@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="OpenStreetMap server">
+  <node id="1" lat="48.92" lon="13.84" version="0" changeset="0"/>
+  <node id="2" lat="54.89" lon="13.84" version="0" changeset="0"/>
+  <node id="3" lat="54.89" lon="24.27" version="0" changeset="0"/>
+  <node id="4" lat="48.92" lon="24.27" version="0" changeset="0"/>
+  <way id="5" version="0" changeset="0">
+     <nd ref="1"/>
+     <nd ref="2"/>
+     <nd ref="3"/>
+     <nd ref="4"/>
+  </way>
+  <relation id="6" version="0" changeset="0">
+    <member type="way" ref="5" role=""/>
+    <tag k="name" v="Simple"/>
+  </relation>
+</osm>
