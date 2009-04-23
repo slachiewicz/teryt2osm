@@ -183,8 +183,8 @@ class OSM_Boundary(object):
             j = plen - 1
             while i < plen:
                 if ( ((pol[i][0] > lat) != (pol[j][0] > lat)) and 
-                        (lon < (pol[j][1] - pol[i][1]) * (lat - pol[i][0]) / (pol[j][0] - pol[i][0]) + pol[i][1]) ):
-                    c = not contains
+                        (lon < ((pol[j][1] - pol[i][1]) * (lat - pol[i][0]) / (pol[j][0] - pol[i][0]) + pol[i][1])) ):
+                    contains = not contains
                 j = i
                 i += 1
             if contains:
