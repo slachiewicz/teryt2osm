@@ -30,11 +30,15 @@ import subprocess
 import sys
 from teryt2osm.reporting import Reporting
 from teryt2osm.utils import setup_locale, add_to_list_dict, count_elements
+from teryt2osm.osm import OSM_Node
+from teryt2osm.osm_boundary import load_osm_boundary
 import xml.etree.cElementTree as ElementTree
 from urllib import urlopen
 
 setup_locale()
 reporting = Reporting(logging = False)
+
+boundary = load_osm_boundary("data/boundary_poland.osm")
 
 # fast node count
 node_count = count_elements("data/raw_data.osm", "node")
@@ -52,27 +56,23 @@ for element in root:
     if element.tag != 'node':
         print >>sys.stderr, "Removing %r element"  % (element.tag,)
     else:
-        remove = False
-        name = "unknown"
-        id = element.attrib["id"]
-        for tag in element:
-            if tag.tag != 'tag':
-                continue
-            key = tag.attrib["k"]
-            value = tag.attrib["v"]
-            if key in ('is_in', 'is_in:country'):
-                if "Poland" not in value and "Polska" not in value:
-                    remove = True
-                    print >>sys.stderr, "Poland not in %r" % (value,)
-            elif key == 'is_in:country_code':
-                if value.lower != 'pl':
-                    remove = True
-            elif key == "name":
-                name = value
-        if remove:
-            print >>sys.stderr, "Removing:", name
+        node = OSM_Node(element)
+        if node in boundary:
+            remove = False
         else:
-            node_ids.append(str(id))
+            remove = True
+        is_in = node.tags.get("is_in", u"")
+        is_in_c = node.tags.get("is_in:country", u"")
+        if remove and not is_in and not is_in_c:
+            remove = False
+        if is_in and ("Poland" in is_in or "Polska" in is_in):
+            remove = False
+        if is_in_c and ("Poland" in is_in_c or "Polska" in is_in_c):
+            remove = False
+        if remove:
+            reporting.output_msg("info", u"Removing: %s" % (node.name,))
+        else:
+            node_ids.append(str(node.id))
     reporting.progress()
 
 reporting.progress_stop()
