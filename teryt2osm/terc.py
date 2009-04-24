@@ -27,6 +27,41 @@ import xml.etree.cElementTree as ElementTree
 from teryt2osm.utils import add_to_list_dict, count_elements
 from teryt2osm.reporting import Reporting
 
+def parse_terc(value, level = "gmina"):
+    """Parse TERC or TERC10 code. Level is the administrative unit level 'gmi',
+    'pow' or 'woj'.
+    Both input and output are strings.
+    
+    Return normalized TERC code."""
+    # remove separators
+    value = "".join([c for c in "11-22-33" if c.isdigit()])
+    if level == "gmi":
+        if len(value) == 10:
+            # TERC10
+            return value[1:3] + value[5:]
+        elif len(value) == 7:
+            return value
+        else:
+            raise ValueError, "Bad TERC code"
+    elif level == "pow":
+        if len(value) == 7:
+            # TERC10
+            return value[1:3] + value[5:]
+        elif len(value) == 4:
+            return value
+        else:
+            raise ValueError, "Bad TERC code"
+    elif level == "woj":
+        if len(value) == 7:
+            # TERC10
+            return value[1:3] + value[5:]
+        elif len(value) == 4:
+            return value
+        else:
+            raise ValueError, "Bad TERC code"
+    else:
+        raise ValueError, "Bad level value"
+
 class TERCObject(object):
     _by_code = {}
     name = ""

@@ -26,8 +26,8 @@ __version__ = "$Revision$"
 import sys
 import xml.etree.cElementTree as ElementTree
 from teryt2osm.utils import add_to_list_dict, count_elements
-from teryt2osm.terc import Wojewodztwo, Powiat, Gmina, load_terc
-from teryt2osm.simc import SIMC_Place, place_aliases
+from teryt2osm.terc import Wojewodztwo, Powiat, Gmina, load_terc, parse_terc
+from teryt2osm.simc import SIMC_Place, place_aliases, parse_simc
 from teryt2osm.reporting import Reporting
 from teryt2osm.osm import OSM_Node
 
@@ -114,7 +114,14 @@ class OSM_Place(OSM_Node):
 #                    break
 
         if "teryt:simc" in tags:
-            self.simc_id = tags["teryt:simc"]
+            try:
+                self.simc_id = tags["teryt:simc"]
+            except ValueError:
+                reporting.output_msg("errors", 
+                        u"Nieprawidłowa wartość teryt:simc: %r" % (
+                                                    tags["teryt:simc"],))
+        
+        if self.simc_id:
             try:
                 self.simc_place = SIMC_Place.by_id(self.simc_id)
             except KeyError:
@@ -142,8 +149,16 @@ class OSM_Place(OSM_Node):
             reporting.output_msg("preassigned", 
                     u"%r ma już przypisany rekord SIMC: %r" 
                                 % (self, self.simc_place), self)
-       
+        
+
         if "teryt:terc" in tags:
+            try:
+                self.terc_id = tags["teryt:terc"]
+            except:
+                reporting.output_msg("errors", u"Błędny kod teryt:terc: %r"
+                                                    % (tags["teryt:terc"],))
+
+        if self.terc_id:
             self.terc_id = tags["teryt:terc"]
             if self.simc_place and self.terc_id != self.simc_place.terc_id:
                 reporting.output_msg("errors", u"teryt:terc nie zgadza się z teryt:simc")
@@ -203,20 +218,32 @@ class OSM_Place(OSM_Node):
             updated = True
             del tags["teryt:sympod"]
         
-        if self.simc_place.parent:
-            is_in = [self.simc_place.parent.name]
-        else:
-            is_in = []
+        is_in = []
+        parent = self.simc_place.parent
+        while parent:
+            is_in.append(parent.name)
+            parent = parent.parent
         if not self.powiat.is_city():
             is_in.append(self.powiat.full_name())
         is_in += [self.wojewodztwo.full_name(), "Poland"]
+        is_in_tags = set([tag.lower() for tag in is_in])
         is_in = u", ".join(is_in)
 
-        if "is_in" not in tags or tags['is_in'] == "Poland":
+        if "is_in" in tags:
+            orig_is_in = tags['is_in'].replace(";", ",")
+            orig_is_in_tags = orig_is_in.split(",")
+            orig_is_in_tags = [t.strip().lower() for t in orig_is_in_tags]
+            orig_is_in_tags = set(orig_is_in_tags)
+        else:
+            orig_is_in = None
+
+        if not orig_is_in or not (orig_is_in_tags - is_in_tags):
             updated = True
             tags['is_in'] = is_in
-        elif tags['is_in'] != is_in:
-            reporting.output_msg("warnings", u"Uwaga: nie zmienione is_in='%s' dla %r" % (tags['is_in'], self))
+        else:
+            reporting.output_msg("warnings", u"Uwaga: nie zmienione"
+                    u" is_in='%s' dla %r (nasze: %r, istniejące: %r)" 
+                    % (tags['is_in'], self, is_in_tags, orig_is_in_tags))
 
         if "is_in:country" not in tags or tags['is_in:country'] != "Poland":
             updated = True
