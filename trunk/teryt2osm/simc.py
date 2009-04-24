@@ -40,6 +40,18 @@ place_aliases = {
 wmrodz = {}
 rm2place_mapping = {}
 
+def parse_simc(value):
+    """Parse SIMC code (7 digit). 
+    Both input and output are strings.
+    
+    Return normalized SIMC code.
+    Raise ValueError on error."""
+    value = value.strip()
+    if len(value) != 7:
+        raise ValueError
+    int(value)
+    return value
+
 def load_wmrodz():
     reporting = Reporting()
     reporting.output_msg("info", u"Ładowanie data/WMRODZ.xml")

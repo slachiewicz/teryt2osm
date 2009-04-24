@@ -28,6 +28,7 @@ import os
 import subprocess
 import sys
 import traceback
+import codecs
 
 from teryt2osm.utils import setup_locale, add_to_list_dict, count_elements
 from teryt2osm.terc import Wojewodztwo, Powiat, Gmina, load_terc, write_wojewodztwa_wiki
@@ -180,7 +181,7 @@ def refine(places, reference):
     reporting.progress_stop()
     reporting.output_msg("info", u"Znaleziono %i miejsc do usunięcia" % (len(really_bad_matches),))
     good_matches = set(places)
-    good_matches.difference(really_bad_matches)
+    good_matches -= really_bad_matches
     return good_matches
 
 def match():
@@ -189,14 +190,14 @@ def match():
     reporting.output_msg("start", u"%i wstępnie (w danych OSM) przypisanych miejscowości" % (len(preassigned),))
     places_to_match = set([p for p in OSM_Place.all() if not p.simc_place])
     osm_matched1, simc_matched1 = match_names(1, places_to_match)
-    assigned.update(osm_matched1)
+    assigned |=  osm_matched1
     grid = Grid(assigned, 31, 31)
     osm_matched2, simc_matched2 = match_names(2, places_to_match, grid)
-    assigned.update(osm_matched2)
+    assigned |= osm_matched2
     grid = Grid(assigned, 43, 43)
     osm_matched3, simc_matched3 = match_names(3, places_to_match, grid)
-    assigned.update(osm_matched3)
-    matched = osm_matched1.union(osm_matched2, osm_matched3)
+    assigned |= osm_matched3
+    matched = osm_matched1 | osm_matched2 | osm_matched3
     matched = refine(matched, assigned)
     assigned = set(preassigned).union(matched)
     return assigned
@@ -239,7 +240,12 @@ def write_changes(updated_places, created_by):
     reporting = Reporting()
     reporting.progress_start(u"Writting osmChange files", len(woj_trees))
     for woj_name, tree in woj_trees.items():
-        tree.write(os.path.join("output", woj_name.encode("utf-8") + ".osc"), "utf-8")
+        basename = os.path.join("output", woj_name.encode("utf-8"))
+        tree.write(basename + ".osc", "utf-8")
+        comment_file = codecs.open(basename + ".comment", "w", "utf-8")
+        print >> comment_file, u"TERYT import, województwo %s, prepared by %s" % (
+                                                    woj_name, created_by)
+        comment_file.close()
         reporting.progress()
     reporting.progress_stop()
 
