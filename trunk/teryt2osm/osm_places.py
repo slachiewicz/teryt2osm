@@ -203,7 +203,7 @@ class OSM_Place(OSM_Node):
             tags["teryt:simc"] = self.simc_place.id
         if "teryt:terc" not in tags or tags['teryt:terc'] != self.gmina.code:
             updated = True
-            tags["teryt:simc"] = self.gmina.code
+            tags["teryt:terc"] = self.gmina.code
         if "teryt:rm" not in tags or tags['teryt:rm'] != self.simc_place.rm:
             updated = True
             tags["teryt:rm"] = self.simc_place.rm
