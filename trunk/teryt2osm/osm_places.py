@@ -29,8 +29,9 @@ from teryt2osm.utils import add_to_list_dict, count_elements
 from teryt2osm.terc import Wojewodztwo, Powiat, Gmina, load_terc
 from teryt2osm.simc import SIMC_Place, place_aliases
 from teryt2osm.reporting import Reporting
+from teryt2osm.osm import OSM_Node
 
-class OSM_Place(object):
+class OSM_Place(OSM_Node):
     _by_id = {}
     _by_simc_id = {}
     _by_name = {}
@@ -38,6 +39,7 @@ class OSM_Place(object):
     woj_matched = 0
     pow_matched = 0
     def __init__(self, element):
+        OSM_Node.__init__(self, element)
         reporting = Reporting()
 
         self.element = element
@@ -47,25 +49,7 @@ class OSM_Place(object):
         self.simc_id = None
         self.terc_id = None
         self.simc_place = None
-        self.id = element.attrib["id"]
-        self.lon = float(element.attrib["lon"])
-        self.lat = float(element.attrib["lat"])
-        self.changeset = element.attrib["changeset"]
-        self.version = element.attrib["version"]
-
-        tags = {}
-        for tag in element:
-            if tag.tag != 'tag':
-                continue
-            key = tag.attrib["k"]
-            value = tag.attrib["v"]
-            tags[key] = value
-        self.tags = tags
-
-        if "name" in tags:
-            self.name = tags["name"]
-        else:
-            self.name = None
+        tags = self.tags
 
         if "place" in tags:
             self.type = tags["place"]
@@ -152,12 +136,12 @@ class OSM_Place(object):
                 reporting.output_msg("errors", 
                         u"teryt:simc nie zgadza się z położeniem wynikającym z innych tagów")
             else:    
-                self.gmina = simc_place.gmina
-                self.powiat = simc_place.powiat
-                self.wojewodztwo = simc_place.wojewodztwo
+                self.gmina = self.simc_place.gmina
+                self.powiat = self.simc_place.powiat
+                self.wojewodztwo = self.simc_place.wojewodztwo
             reporting.output_msg("preassigned", 
                     u"%r ma już przypisany rekord SIMC: %r" 
-                                % (self, simc_place), self)
+                                % (self, self.simc_place), self)
        
         if "teryt:terc" in tags:
             self.terc_id = tags["teryt:terc"]
