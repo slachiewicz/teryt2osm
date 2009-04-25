@@ -207,9 +207,12 @@ class OSM_Place(OSM_Node):
         if "teryt:rm" not in tags or tags['teryt:rm'] != self.simc_place.rm:
             updated = True
             tags["teryt:rm"] = self.simc_place.rm
+        if "teryt:date" in tags:
+            updated = True
+            del tags["teryt:date"]
         if "teryt:stan_na" not in tags or tags['teryt:stan_na'] != self.simc_place.date:
             updated = True
-            tags["teryt:date"] = self.simc_place.date
+            tags["teryt:stan_na"] = self.simc_place.date
         if self.simc_place.parent:
             if "teryt:sympod" not in tags or tags['teryt:sympod'] != self.simc_place.parent.id:
                 updated = True
