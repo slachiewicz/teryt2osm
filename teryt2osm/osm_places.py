@@ -54,7 +54,7 @@ class OSM_Place(OSM_Node):
         if "place" in tags:
             self.type = tags["place"]
         else:
-            self.place = None
+            self.type = None
 
         self.normalized_type = place_aliases.get(self.type, self.type)
 
