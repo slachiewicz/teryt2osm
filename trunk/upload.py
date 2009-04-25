@@ -189,6 +189,9 @@ try:
         api.create_changeset(u"teryt2osm upload.py v. %s" % (version,), comment)
         try:
             api.upload(root)
+        except HTTPError, err:
+            print >>sys.stderr, err
+            sys.exit(1)
         finally:
             api.close_changeset()
 except HTTPError, err:
