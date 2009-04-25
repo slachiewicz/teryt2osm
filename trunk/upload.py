@@ -183,7 +183,7 @@ try:
             print u"Pomijam...\n"
             continue
         print
-        api.create_changeset(u"teryt2osm combine.py v. %s" % (version,), comment)
+        api.create_changeset(u"teryt2osm upload.py v. %s" % (version,), comment)
         try:
             api.upload(root)
         finally:
