@@ -233,15 +233,15 @@ class OSM_Place(OSM_Node):
         is_in = u", ".join(is_in)
 
         if "is_in" in tags:
-            orig_is_in = tags['is_in'].replace(";", ",")
-            orig_is_in_tags = orig_is_in.split(",")
-            orig_is_in_tags = [t.strip().lower() for t in orig_is_in_tags]
+            orig_is_in = tags['is_in'].replace(u";", u",")
+            orig_is_in_tags = orig_is_in.split(u",")
+            orig_is_in_tags = [unicode(t).strip().lower() for t in orig_is_in_tags]
             orig_is_in_tags = set(orig_is_in_tags)
         else:
             orig_is_in = None
-            orig_is_in_tags = []
+            orig_is_in_tags = set()
 
-        if not orig_is_in or (orig_is_in_tags - is_in_tags):
+        if (not orig_is_in) or not (orig_is_in_tags - is_in_tags):
             updated.append("is_in")
             tags['is_in'] = is_in
         elif orig_is_in and orig_is_in != is_in:
