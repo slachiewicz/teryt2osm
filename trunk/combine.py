@@ -276,8 +276,8 @@ try:
     load_osm()
     assigned = match()
     updated = update(assigned)
-    reporting.close()
     write_changes(updated, u"teryt2osm combine.py v. %s" % (version,))
+    reporting.close()
 except Exception,err:
     print >>sys.stderr, repr(err)
     traceback.print_exc(file=sys.stderr)
