@@ -140,7 +140,7 @@ class Reporting(object):
     def _init(self, logging = True):
         global OSM_Place
         from teryt2osm.osm_places import OSM_Place
-        self.logging = True
+        self.logging = logging
         self.progress_total = None
         self.progress_step = None
         self.progress_value = None
@@ -187,7 +187,8 @@ class Reporting(object):
             channel.split_level = split_level
 
     def log(self, msg):
-        print >> self.log_file, msg
+        if self.logging:
+            print >> self.log_file, msg
 
     def print_msg(self, msg):
         if self.need_eol:
@@ -201,8 +202,7 @@ class Reporting(object):
         channel = self.get_channel(channel_name)
         if not channel.quiet:
             self.print_msg(msg)
-            if self.logging:
-                self.log(msg)
+            self.log(msg)
         if self.logging:
             channel.emit(msg, location)
 
@@ -219,8 +219,7 @@ class Reporting(object):
         self.progress_step = max(int(total * step / 100), 1)
         self.progress_value = 0
         self.progress_msg = msg
-        if self.logging:
-            self.log(u"%s… rozpoczęte" % (msg,))
+        self.log(u"%s… rozpoczęte" % (msg,))
         sys.stderr.write(u"\r%s…  " % (msg,))
         sys.stderr.flush()
         self.need_eol = True
@@ -251,5 +250,4 @@ class Reporting(object):
         self.progress_step = None
         self.progress_value = None
         self.need_eol = False
-        if self.logging:
-            self.log(u"%s… zakończone" % self.progress_msg)
+        self.log(u"%s… zakończone" % self.progress_msg)
