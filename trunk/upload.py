@@ -121,6 +121,7 @@ class OSM_API(object):
                 element.attrib["changeset"] = str(self.changeset)
         body = ElementTree.tostring(change, "utf-8")
         reply = self._run_request("POST", "/api/0.6/changeset/%i/upload" 
+                                                % (self.changeset,), body)
         print >>sys.stderr, "zrobione."
 
     def close_changeset(self):
