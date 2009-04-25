@@ -104,6 +104,7 @@ class OSM_API(object):
         body = ElementTree.tostring(root, "utf-8")
         reply = self._run_request("PUT", "/api/0.6/changeset/create", body)
         print >>sys.stderr, u"Tworzę changeset…",
+        sys.stderr.flush()
         changeset = int(reply.strip())
         print >>sys.stderr, "zrobione. Id:", changeset
         self.changeset = changeset
@@ -120,12 +121,14 @@ class OSM_API(object):
         reply = self._run_request("POST", "/api/0.6/changeset/%i/upload" 
                                                 % (self.changeset,), body)
         print >>sys.stderr, u"Wysyłam zmiany…",
+        sys.stderr.flush()
         print >>sys.stderr, "zrobione."
 
     def close_changeset(self):
         if self.changeset is None:
             raise RuntimeError, "Changeset not opened"
         print >>sys.stderr, u"Zamykam…",
+        sys.stderr.flush()
         reply = self._run_request("PUT", "/api/0.6/changeset/%i/close" 
                                                     % (self.changeset,))
         self.changeset = None
