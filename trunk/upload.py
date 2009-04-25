@@ -96,6 +96,8 @@ class OSM_API(object):
     def create_changeset(self, created_by, comment):
         if self.changeset is not None:
             raise RuntimeError, "Changeset already opened"
+        print >>sys.stderr, u"Tworzę changeset…",
+        sys.stderr.flush()
         root = ElementTree.Element("osm")
         tree = ElementTree.ElementTree(root)
         element = ElementTree.SubElement(root, "changeset")
@@ -103,8 +105,6 @@ class OSM_API(object):
         ElementTree.SubElement(element, "tag", {"k": "comment", "v": comment})
         body = ElementTree.tostring(root, "utf-8")
         reply = self._run_request("PUT", "/api/0.6/changeset/create", body)
-        print >>sys.stderr, u"Tworzę changeset…",
-        sys.stderr.flush()
         changeset = int(reply.strip())
         print >>sys.stderr, "zrobione. Id:", changeset
         self.changeset = changeset
@@ -112,6 +112,8 @@ class OSM_API(object):
     def upload(self, change):
         if self.changeset is None:
             raise RuntimeError, "Changeset not opened"
+        print >>sys.stderr, u"Wysyłam zmiany…",
+        sys.stderr.flush()
         for operation in change:
             if operation.tag not in ("create", "modify", "delete"):
                 continue
@@ -119,9 +121,6 @@ class OSM_API(object):
                 element.attrib["changeset"] = str(self.changeset)
         body = ElementTree.tostring(change, "utf-8")
         reply = self._run_request("POST", "/api/0.6/changeset/%i/upload" 
-                                                % (self.changeset,), body)
-        print >>sys.stderr, u"Wysyłam zmiany…",
-        sys.stderr.flush()
         print >>sys.stderr, "zrobione."
 
     def close_changeset(self):
