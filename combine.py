@@ -29,6 +29,7 @@ import subprocess
 import sys
 import traceback
 import codecs
+import glob
 
 from teryt2osm.utils import setup_locale, add_to_list_dict, count_elements
 from teryt2osm.terc import Wojewodztwo, Powiat, Gmina, load_terc, write_wojewodztwa_wiki
@@ -210,6 +211,8 @@ def update(places):
     return updated
 
 def write_changes(updated_places, created_by):
+    for filename in glob.glob("output/*.osm") + glob.glob("output/*.comment"):
+        os.unlink(filename)
     reporting = Reporting()
     reporting.progress_start(u"Preparing osmChange files", len(updated_places))
     woj_trees = {}

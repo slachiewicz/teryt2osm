@@ -196,29 +196,29 @@ class OSM_Place(OSM_Node):
         if not self.simc_place:
             return False
         reporting = Reporting()
-        updated = False
+        updated = []
         tags = self.tags
         if "teryt:simc" not in tags or tags['teryt:simc'] != self.simc_place.id:
-            updated = True
+            updated.append("teryt:simc")
             tags["teryt:simc"] = self.simc_place.id
         if "teryt:terc" not in tags or tags['teryt:terc'] != self.gmina.code:
-            updated = True
+            updated.append("teryt:terc")
             tags["teryt:terc"] = self.gmina.code
         if "teryt:rm" not in tags or tags['teryt:rm'] != self.simc_place.rm:
-            updated = True
+            updated.append("teryt:rm")
             tags["teryt:rm"] = self.simc_place.rm
         if "teryt:date" in tags:
-            updated = True
+            updated.append("teryt:date")
             del tags["teryt:date"]
         if "teryt:stan_na" not in tags or tags['teryt:stan_na'] != self.simc_place.date:
-            updated = True
+            updated.append("teryt:stan_na")
             tags["teryt:stan_na"] = self.simc_place.date
         if self.simc_place.parent:
             if "teryt:sympod" not in tags or tags['teryt:sympod'] != self.simc_place.parent.id:
-                updated = True
+                updated.append("teryt:sympod")
                 tags["teryt:sympod"] = self.simc_place.parent.id
         elif "teryt:sympod" in tags:
-            updated = True
+            updated.append("teryt:sympod")
             del tags["teryt:sympod"]
         
         is_in = []
@@ -228,8 +228,8 @@ class OSM_Place(OSM_Node):
             parent = parent.parent
         if not self.powiat.is_city():
             is_in.append(self.powiat.full_name())
-        is_in += [self.wojewodztwo.full_name(), "Poland"]
-        is_in_tags = set([tag.lower() for tag in is_in])
+        is_in += [self.wojewodztwo.full_name(), u"Poland"]
+        is_in_tags = set([unicode(tag).lower() for tag in is_in])
         is_in = u", ".join(is_in)
 
         if "is_in" in tags:
@@ -239,29 +239,34 @@ class OSM_Place(OSM_Node):
             orig_is_in_tags = set(orig_is_in_tags)
         else:
             orig_is_in = None
+            orig_is_in_tags = []
 
-        if not orig_is_in or not (orig_is_in_tags - is_in_tags):
-            updated = True
+        if not orig_is_in or (orig_is_in_tags - is_in_tags):
+            updated.append("is_in")
             tags['is_in'] = is_in
-        else:
+        elif orig_is_in and orig_is_in != is_in:
             reporting.output_msg("warnings", u"Uwaga: nie zmienione"
                     u" is_in='%s' dla %r (nasze: %r, istniejące: %r)" 
                     % (tags['is_in'], self, is_in_tags, orig_is_in_tags))
 
         if "is_in:country" not in tags or tags['is_in:country'] != "Poland":
-            updated = True
+            updated.append("is_in:country")
             tags['is_in:country'] = "Poland"
         if "is_in:province" not in tags or tags['is_in:province'] != self.wojewodztwo.full_name():
-            updated = True
+            updated.append("is_in:province")
             tags['is_in:province'] = self.wojewodztwo.full_name()
         if self.powiat.is_city():
             if "is_in:county" in tags:
                 updated = True
+                updated.append("is_in:county")
                 del tags["is_in:county"]
         elif "is_in:county" not in tags or tags["is_in:county"] != self.powiat.full_name():
-            updated = True
+            updated.append("is_in:county")
             tags['is_in:county'] = self.powiat.full_name()
-        return updated 
+        if updated:
+            reporting.output_msg("info", u"%s: zmieniono: %s" % (
+                                    self, u", ".join(updated)))
+        return len(updated) > 0
 
     @classmethod
     def by_id(cls, place_id):
