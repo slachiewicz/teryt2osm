@@ -104,7 +104,7 @@ try:
         for part in range(1, num_parts + 1):
             comment_fn = "%s-part%i.comment" % (filename_base, part)
             comment_file = codecs.open(comment_fn, "w", "utf-8")
-            print >> comment_file, u"%s, part %i" % (comment, part)
+            print >> comment_file, u"%s, part %i/%i" % (comment, part, num_parts)
             comment_file.close()
 except Exception,err:
     print >>sys.stderr, repr(err)
