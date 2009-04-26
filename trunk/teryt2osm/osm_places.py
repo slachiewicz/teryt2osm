@@ -241,13 +241,19 @@ class OSM_Place(OSM_Node):
             orig_is_in = None
             orig_is_in_tags = set()
 
-        if (not orig_is_in) or not (orig_is_in_tags - is_in_tags):
+        if not orig_is_in:
             updated.append("is_in")
             tags['is_in'] = is_in
-        elif orig_is_in and orig_is_in != is_in:
-            reporting.output_msg("warnings", u"Uwaga: nie zmienione"
-                    u" is_in='%s' dla %r (nasze: %r, istniejące: %r)" 
-                    % (tags['is_in'], self, is_in_tags, orig_is_in_tags))
+        elif orig_is_in != is_in:
+            if not (orig_is_in_tags - is_in_tags):
+                # original is_in is a subset of new is_in
+                updated.append("is_in")
+                tags['is_in'] = is_in
+            else:
+                reporting.output_msg("warnings", u"Uwaga: nie zmienione"
+                        u" is_in='%s' dla %r (nasze: %r, istniejące: %r, różnica: %r)" 
+                        % (tags['is_in'], self, is_in_tags, orig_is_in_tags,
+                                                (orig_is_in_tags - is_in_tags)))
 
         if "is_in:country" not in tags or tags['is_in:country'] != "Poland":
             updated.append("is_in:country")
