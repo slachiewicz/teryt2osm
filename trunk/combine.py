@@ -211,7 +211,7 @@ def update(places):
     return updated
 
 def write_changes(updated_places, created_by):
-    for filename in glob.glob("output/*.osm") + glob.glob("output/*.comment"):
+    for filename in glob.glob("output/*.osc") + glob.glob("output/*.comment"):
         os.unlink(filename)
     reporting = Reporting()
     reporting.progress_start(u"Preparing osmChange files", len(updated_places))
