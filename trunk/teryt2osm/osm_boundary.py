@@ -124,7 +124,7 @@ class OSM_Boundary(object):
             self. _contains_impl = self._contains_shapely_impl
         else:
             reporting.output_msg("info", 
-                "Using Python (slow!) implementation for the 'point in polygon' checks")
+                "Using Python function for the 'point in polygon' checks")
             self. _contains_impl = self._contains_python_impl
 
     def __repr__(self):
