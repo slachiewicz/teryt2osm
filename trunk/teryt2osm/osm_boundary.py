@@ -30,6 +30,12 @@ from teryt2osm.terc import Wojewodztwo, Powiat, Gmina, load_terc
 from teryt2osm.simc import SIMC_Place, place_aliases
 from teryt2osm.reporting import Reporting
 from teryt2osm.osm import OSM_Node, OSM_Way
+        
+try:
+    from shapely.geometry import Point, MultiPolygon
+    HAVE_SHAPELY=True
+except ImportError:
+    HAVE_SHAPELY=False
 
 class OSM_Boundary(object):
     def __init__(self, relation_element, way_elements, node_elements):
@@ -111,6 +117,15 @@ class OSM_Boundary(object):
                     self.open = True
                     break
             self.polygons.append(polygon)
+        if HAVE_SHAPELY:
+            reporting.output_msg("info", 
+                    "Using Shapely for 'point in polygon' checks")
+            self.multi_polygon = MultiPolygon([(p, ()) for p in self.polygons])
+            self. _contains_impl = self._contains_shapely_impl
+        else:
+            reporting.output_msg("info", 
+                "Using Python (slow!) implementation for the 'point in polygon' checks")
+            self. _contains_impl = self._contains_python_impl
 
     def __repr__(self):
         if self.open:
@@ -120,9 +135,7 @@ class OSM_Boundary(object):
         return "<OSM_Boundary #%s %r %s %i ways %i polygons>" % (self.id, 
                 self.name, open_s, len(self.ways), len(self.polygons))
 
-    def __contains__(self, location):
-        if self.open:
-            return True
+    def _contains_python_impl(self, location):
         lat = location.lat
         lon = location.lon
         for pol in self.polygons:
@@ -139,6 +152,15 @@ class OSM_Boundary(object):
             if contains:
                 return True
         return False
+    
+    def _contains_shapely_impl(self, location):
+        point = Point(location.lat, location.lon)
+        return self.multi_polygon.contains(point)
+   
+    def __contains__(self, location):
+        if self.open:
+            return True
+        return self._contains_impl(location)
     
 def load_osm_boundary(filename):
     """Loads a boundary relation from an OSM file. The file must also
