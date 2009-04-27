@@ -127,11 +127,15 @@ class Powiat(TERCObject):
     _by_code = {}
     _by_name = {}
     def __init__(self, name, woj_code, pow_code, date):
-        self.name = name
         self.date = date
         self.woj_code = woj_code
         self.pow_code = pow_code
         self.code = woj_code + pow_code
+        self.is_capital = name.startswith("st. ")
+        self.is_city = self.is_capital or name[0].isupper()
+        if self.is_capital:
+            name = name[4:]
+        self.name = name
         self.register()
         add_to_list_dict(self._by_name, name.lower(), self)
 
@@ -142,14 +146,13 @@ class Powiat(TERCObject):
         return woj
 
     def full_name(self):
-        if self.name[0].isupper():
+        if self.is_capital:
+            return self.name
+        elif self.is_city:
             return u"powiat m. " + self.name
         else:
             return u"powiat " + self.name
         
-    def is_city(self):
-        return self.name[0].isupper()
-
     def __repr__(self):
         return "<Powiat %r>" % (self.full_name(),)
 
@@ -172,6 +175,7 @@ class Powiat(TERCObject):
 
 class Gmina(TERCObject):
     _by_code = {}
+    _by_name = {}
     def __init__(self, name, woj_code, pow_code, gmi_code, gmi_type, date):
         self.name = name
         self.date = date
@@ -181,6 +185,7 @@ class Gmina(TERCObject):
         self.gmi_type = gmi_type
         self.code = woj_code + pow_code + gmi_code + gmi_type
         self.register()
+        add_to_list_dict(self._by_name, name.lower(), self)
     @property
     def wojewodztwo(self):
         woj = Wojewodztwo._by_code[self.woj_code]
@@ -191,6 +196,35 @@ class Gmina(TERCObject):
         pow = Powiat._by_code[self.woj_code + self.pow_code]
         self.__dict__['powiat'] = pow
         return pow
+    @classmethod
+    def by_name(cls, name, try_hard = False, powiat = None):
+        name = name.lower()
+        if name.startswith(u"gmina ") or name.startswith(u"gm. ") or name.startswith(u"g. "):
+            name = name.split(None, 1)[1]
+        elif not try_hard:
+            raise KeyError, name
+        all = cls._by_name[name]
+        if len(all) == 1:
+            return all[0]
+        if powiat:
+            for gmi in all:
+                if gmi.powiat is powiat:
+                    return gmi
+            raise KeyError, name
+        raise ValueError, u"Niejednoznaczna nazwa gminy: %r" % (name,)
+    def is_city(self, name = None):
+        is_city = self.gmi_type in ("1", "4")
+        if name is None or not is_city:
+            return is_city
+        g_name = self.name.lower()
+        if g_name.startswith("m. st. "):
+            g_name = g_name[7:]
+        elif g_name.startswith("m. "):
+            g_name = g_name[3:]
+        return g_name == name.lower()
+
+    def full_name(self):
+        return u"gmina %s" % (self.name,)
 
 def load_terc_object(element):
     for child in element:

@@ -38,6 +38,7 @@ class OSM_Place(OSM_Node):
     _by_type = {}
     woj_matched = 0
     pow_matched = 0
+    gmi_matched = 0
     def __init__(self, element):
         OSM_Node.__init__(self, element)
         reporting = Reporting()
@@ -103,15 +104,28 @@ class OSM_Place(OSM_Node):
             else:
                 self.wojewodztwo = self.powiat.wojewodztwo
 
-#        if "is_in:municipality" in tags:
-#            gmi = tags["is_in:municipality"]
-#            self.is_in_gmi = Gmina.try_by_name(gmi, True)
-#        elif is_in_parts:
-#            for part in is_in_parts:
-#                gmi = Gmina.try_by_name(gmi, False)
-#                if gmi:
-#                    self.is_in_gmi = gmi
-#                    break
+        if "is_in:municipality" in tags:
+            gmi = tags["is_in:municipality"]
+            self.powiat = Gmina.try_by_name(gmi, True, self.powiat)
+            OSM_Place.gmi_matched += 1
+        elif is_in_parts:
+            for part in is_in_parts:
+                gmi = Gmina.try_by_name(part, False, self.powiat)
+                if gmi:
+                    self.gmi = gmi 
+                    OSM_Place.gmi_matched += 1
+                    break
+
+        if self.gmina:
+            reporting.output_msg("gmi_set", u"%s jest w %s" % (self.name,
+                            self.gmina.full_name()), self)
+            if self.powiat:
+                if self.gmina.powiat != self.powiat:
+                    reporting.output_msg("errors", u"%s: Gmina nie pasuje do powiatu"
+                                                        % (self,))
+                    self.gmina = None
+            else:
+                self.powiat = self.gmina.powiat
 
         if "teryt:simc" in tags:
             try:
@@ -222,11 +236,22 @@ class OSM_Place(OSM_Node):
             del tags["teryt:sympod"]
         
         is_in = []
+        is_in_places = {}
+        if self.powiat.is_capital and self.name != "Warszawa":
+            is_in_places["city"] = "Warszawa"
         parent = self.simc_place.parent
         while parent:
             is_in.append(parent.name)
+            parent_place = self._by_simc_id.get(parent.id)
+            if parent_place:
+                is_in_places[parent_place.type] = parent_place.name
             parent = parent.parent
-        if not self.powiat.is_city():
+
+        if self.simc_place.rm not in ("00", "99", "95") and not self.gmina.is_city(self.name):
+            is_in.append(self.gmina.full_name())
+        if not self.powiat.is_city:
+            is_in.append(self.powiat.full_name())
+        elif self.powiat.is_capital and self.name != self.powiat.name:
             is_in.append(self.powiat.full_name())
         is_in += [self.wojewodztwo.full_name(), u"Poland"]
         is_in_tags = set([unicode(tag).lower() for tag in is_in])
@@ -237,6 +262,8 @@ class OSM_Place(OSM_Node):
             orig_is_in_tags = orig_is_in.split(u",")
             orig_is_in_tags = [unicode(t).strip().lower() for t in orig_is_in_tags]
             orig_is_in_tags = set(orig_is_in_tags)
+            if self.powiat.is_capital:
+                orig_is_in_tags.discard("powiat st. warszawa")
         else:
             orig_is_in = None
             orig_is_in_tags = set()
@@ -261,14 +288,33 @@ class OSM_Place(OSM_Node):
         if "is_in:province" not in tags or tags['is_in:province'] != self.wojewodztwo.full_name():
             updated.append("is_in:province")
             tags['is_in:province'] = self.wojewodztwo.full_name()
-        if self.powiat.is_city():
+        if self.powiat.is_city:
             if "is_in:county" in tags:
-                updated = True
                 updated.append("is_in:county")
                 del tags["is_in:county"]
         elif "is_in:county" not in tags or tags["is_in:county"] != self.powiat.full_name():
             updated.append("is_in:county")
             tags['is_in:county'] = self.powiat.full_name()
+        if (self.simc_place.rm in ("00", "99", "95") and not self.powiat.is_capital 
+                        or self.gmina.is_city(self.name)):
+            if "is_in:municipality" in tags:
+                updated.append("is_in:municipality")
+                del tags["is_in:municipality"]
+        elif "is_in:municipality" not in tags or tags["is_in:municipality"] != self.gmina.full_name():
+            updated.append("is_in:municipality")
+            tags['is_in:municipality'] = self.gmina.full_name()
+
+        for parent_type in ("village", "suburb", "city", "town"):
+            parent_name = is_in_places.get(parent_type)
+            tag_name = "is_in:" + parent_type
+            if not parent_name:
+                if tag_name in tags:
+                    updated.append("tag_name")
+                    del tags[tag_name]
+            elif tag_name not in tags or tags[tag_name] != parent_name:
+                updated.append("tag_name")
+                tags[tag_name] = parent_name
+
         if updated:
             reporting.output_msg("info", u"%s: zmieniono: %s" % (
                                     self, u", ".join(updated)))
@@ -323,6 +369,6 @@ def load_osm():
             reporting.progress()
     reporting.progress_stop()
     reporting.output_msg("stats", u"Załadowano %i miejsc." 
-                    u"Dopasowano %i województw i %i powiatów." % (
+                    u"Dopasowano %i województw, %i powiatów i %i gmin." % (
                     OSM_Place.count(), OSM_Place.woj_matched,
-                                            OSM_Place.pow_matched))
+                                OSM_Place.pow_matched, OSM_Place.gmi_matched))
