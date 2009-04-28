@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python -u
 # vi: encoding=utf-8
 
 # teryt2osm - tool to merge TERYT data with OSM maps
