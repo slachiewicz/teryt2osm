@@ -85,10 +85,13 @@ class TERCObject(object):
     def by_name(cls, name, try_hard = False, wojewodztwo = None, powiat = None):
         raise NotImplementedError, "Not implemented"
     @classmethod
-    def try_by_name(cls, name, try_hard = False, wojewodztwo = None, powiat = None):
+    def try_by_name(cls, name, try_hard = False, wojewodztwo = None,
+                                        powiat = None, place_name = None):
         try:
-            if powiat:
-                return cls.by_name(name, try_hard, wojewodztwo, powiat)
+            if place_name:
+                return cls.by_name(name, try_hard, powiat, place_name)
+            elif powiat:
+                return cls.by_name(name, try_hard, powiat)
             elif wojewodztwo:
                 return cls.by_name(name, try_hard, wojewodztwo)
             else:
@@ -122,6 +125,9 @@ class Wojewodztwo(TERCObject):
             raise KeyError, name
         if name in cls._by_name:
             return cls._by_name[name]
+        
+    def __repr__(self):
+        return "<Wojewodztwo %s %r>" % (self.code, self.full_name())
 
 class Powiat(TERCObject):
     _by_code = {}
@@ -152,9 +158,6 @@ class Powiat(TERCObject):
             return u"powiat m. " + self.name
         else:
             return u"powiat " + self.name
-        
-    def __repr__(self):
-        return "<Powiat %r>" % (self.full_name(),)
 
     @classmethod
     def by_name(cls, name, try_hard = False, wojewodztwo = None):
@@ -172,6 +175,9 @@ class Powiat(TERCObject):
                     return pow
             raise KeyError, name
         raise ValueError, u"Niejednoznaczna nazwa powiatu: %r" % (name,)
+        
+    def __repr__(self):
+        return "<Powiat %s %r>" % (self.code, self.full_name())
 
 class Gmina(TERCObject):
     _by_code = {}
@@ -197,7 +203,8 @@ class Gmina(TERCObject):
         self.__dict__['powiat'] = pow
         return pow
     @classmethod
-    def by_name(cls, name, try_hard = False, powiat = None):
+    def by_name(cls, name, try_hard = False, wojewodztwo = None,
+                                    powiat = None, place_name = None):
         name = name.lower()
         if name.startswith(u"gmina ") or name.startswith(u"gm. ") or name.startswith(u"g. "):
             name = name.split(None, 1)[1]
@@ -207,11 +214,24 @@ class Gmina(TERCObject):
         if len(all) == 1:
             return all[0]
         if powiat:
-            for gmi in all:
-                if gmi.powiat is powiat:
-                    return gmi
-            raise KeyError, name
+            all = [ gmi for gmi in all if gmi.powiat is powiat]
+            if not all:
+                raise KeyError, name
+        if len(all) == 1:
+            return all[0]
+        elif len(all) == 2 and all[0].powiat == all[1].powiat:
+            if all[0].gmi_type in ("1","4") and all[1].gmi_type not in ("1","4"):
+                if place_name == name:
+                    return all[0]
+                else:
+                    return all[1]
+            if all[1].gmi_type in ("1","4") and all[0].gmi_type not in ("1","4"):
+                if place_name == name:
+                    return all[1]
+                else:
+                    return all[0]
         raise ValueError, u"Niejednoznaczna nazwa gminy: %r" % (name,)
+
     def is_city(self, name = None):
         is_city = self.gmi_type in ("1", "4")
         if name is None or not is_city:
@@ -225,6 +245,9 @@ class Gmina(TERCObject):
 
     def full_name(self):
         return u"gmina %s" % (self.name,)
+        
+    def __repr__(self):
+        return "<Gmina %s %r>" % (self.code, self.full_name())
 
 def load_terc_object(element):
     for child in element:

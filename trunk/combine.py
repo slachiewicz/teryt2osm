@@ -268,6 +268,10 @@ try:
     reporting.config_channel("match", split_level = 2, quiet = True, mapping = True)
     reporting.config_channel("bad_match", split_level = 1, quiet = True, mapping = True)
     reporting.config_channel("really_bad_match", split_level = 1, quiet = True, mapping = True)
+    reporting.config_channel("gmi_set", quiet = True)
+    reporting.config_channel("pow_set", quiet = True)
+    reporting.config_channel("woj_set", quiet = True)
+    reporting.config_channel("preassigned", quiet = True)
     for filename in ("data.osm", "SIMC.xml", "TERC.xml", "WMRODZ.xml"):
         if not os.path.exists(os.path.join("data", filename)):
             reporting.output_msg("critical", u"Brakujący plik: %r" % (filename,))
