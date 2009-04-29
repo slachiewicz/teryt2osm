@@ -106,11 +106,13 @@ class OSM_Place(OSM_Node):
 
         if "is_in:municipality" in tags:
             gmi = tags["is_in:municipality"]
-            self.powiat = Gmina.try_by_name(gmi, True, self.powiat)
+            self.gmina = Gmina.try_by_name(gmi, True,
+                                powiat = self.powiat, place_name = self.name)
             OSM_Place.gmi_matched += 1
         elif is_in_parts:
             for part in is_in_parts:
-                gmi = Gmina.try_by_name(part, False, self.powiat)
+                gmi = Gmina.try_by_name(part, False, 
+                                powiat = self.powiat, place_name = self.name)
                 if gmi:
                     self.gmi = gmi 
                     OSM_Place.gmi_matched += 1
@@ -155,7 +157,10 @@ class OSM_Place(OSM_Node):
                     or self.wojewodztwo 
                             and gmina.wojewodztwo != self.wojewodztwo):
                 reporting.output_msg("errors", 
-                        u"teryt:simc nie zgadza się z położeniem wynikającym z innych tagów")
+                        u"%s: teryt:simc nie zgadza się z położeniem wynikającym z innych tagów"
+                        u" (%r != %r | %r != %r | %r != %r)" 
+                        % (self, self.gmina, gmina, self.powiat, gmina.powiat,
+                            self.wojewodztwo, gmina.wojewodztwo))
             else:    
                 self.gmina = self.simc_place.gmina
                 self.powiat = self.simc_place.powiat
@@ -184,8 +189,11 @@ class OSM_Place(OSM_Node):
                             or self.wojewodztwo 
                                 and gmina.wojewodztwo != self.wojewodztwo):
                         reporting.output_msg("errors", 
-                                u"teryt:terc nie zgadza się"
-                                u" z położeniem wynikającym z innych tagów")
+                                u"%s: teryt:terc nie zgadza się"
+                                u" z położeniem wynikającym z innych tagów"
+                                u" (%r != %r | %r != %r | %r != %r)" 
+                                % (self, self.gmina, gmina, self.powiat, gmina.powiat,
+                                    self.wojewodztwo, gmina.wojewodztwo))
                     if gmina and not self.gmina:
                         self.gmina = gmina
                         self.powiat = gmina.powiat
