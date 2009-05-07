@@ -77,8 +77,13 @@ def match_names(pass_no, places_to_match, grid = None):
                             osm_place, osm_place.type, types_found), osm_place)
             continue
 
+        cell = None
         if grid:
-            cell = grid.get_cell(osm_place)
+            try:
+                cell = grid.get_cell(osm_place)
+            except KeyError:
+                pass
+        if cell:
             simc_places = [ p for p in simc_places if p.powiat in cell.powiaty ]
             if len(simc_places) > 1:
                 simc_places = [ p for p in simc_places if p.gmina in cell.gminy ]
@@ -109,8 +114,12 @@ def match_names(pass_no, places_to_match, grid = None):
         for place in matching_osm_places:
             if place is osm_place:
                 continue
-            if grid:
-                if grid.get_cell(place) is not cell:
+            if cell:
+                try:
+                    g_cell = grid.get_cell(place) 
+                except KeyError:
+                    g_cell = None
+                if g_cell is not cell:
                     continue
             if place.gmina and place.gmina != simc_place.gmina:
                 continue
@@ -259,12 +268,12 @@ try:
     setup_locale()
     reporting = Reporting()
     reporting.output_msg("info", u"teryt2osm combine.py version: %s" % (version,))
-    reporting.config_channel("errors", split_level = 2, mapping = True)
-    reporting.config_channel("bad_type", split_level = 2, mapping = True, quiet = True)
-    reporting.config_channel("not_found", split_level = 2, quiet = True, mapping = True)
-    reporting.config_channel("ambigous1", split_level = 2, quiet = True, mapping = True)
-    reporting.config_channel("ambigous2", split_level = 2, quiet = True, mapping = True)
-    reporting.config_channel("ambigous3", split_level = 2, mapping = True)
+    reporting.config_channel("errors", split_level = 1, mapping = True)
+    reporting.config_channel("bad_type", split_level = 1, mapping = True, quiet = True)
+    reporting.config_channel("not_found", split_level = 1, quiet = True, mapping = True)
+    reporting.config_channel("ambigous1", split_level = 1, quiet = True, mapping = True)
+    reporting.config_channel("ambigous2", split_level = 1, quiet = True, mapping = True)
+    reporting.config_channel("ambigous3", split_level = 1, mapping = True)
     reporting.config_channel("match", split_level = 2, quiet = True, mapping = True)
     reporting.config_channel("bad_match", split_level = 1, quiet = True, mapping = True)
     reporting.config_channel("really_bad_match", split_level = 1, quiet = True, mapping = True)
