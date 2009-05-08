@@ -183,7 +183,10 @@ class Gmina(TERCObject):
     _by_code = {}
     _by_name = {}
     def __init__(self, name, woj_code, pow_code, gmi_code, gmi_type, date):
-        self.name = name
+        if name.startswith("M."):
+            self.name = "m." + name[2:]
+        else:
+            self.name = name
         self.date = date
         self.woj_code = woj_code
         self.pow_code = pow_code

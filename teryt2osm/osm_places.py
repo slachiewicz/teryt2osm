@@ -296,19 +296,10 @@ class OSM_Place(OSM_Node):
         if "is_in:province" not in tags or tags['is_in:province'] != self.wojewodztwo.full_name():
             updated.append("is_in:province")
             tags['is_in:province'] = self.wojewodztwo.full_name()
-        if self.powiat.is_city:
-            if "is_in:county" in tags:
-                updated.append("is_in:county")
-                del tags["is_in:county"]
-        elif "is_in:county" not in tags or tags["is_in:county"] != self.powiat.full_name():
+        if "is_in:county" not in tags or tags["is_in:county"] != self.powiat.full_name():
             updated.append("is_in:county")
             tags['is_in:county'] = self.powiat.full_name()
-        if (self.simc_place.rm in ("00", "99", "95") and not self.powiat.is_capital 
-                        or self.gmina.is_city(self.name)):
-            if "is_in:municipality" in tags:
-                updated.append("is_in:municipality")
-                del tags["is_in:municipality"]
-        elif "is_in:municipality" not in tags or tags["is_in:municipality"] != self.gmina.full_name():
+        if "is_in:municipality" not in tags or tags["is_in:municipality"] != self.gmina.full_name():
             updated.append("is_in:municipality")
             tags['is_in:municipality'] = self.gmina.full_name()
 
